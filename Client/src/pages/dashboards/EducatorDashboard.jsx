@@ -26,7 +26,7 @@ import axios from "axios";
 import API from "../../common/apis/ServerBaseURL.jsx";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
-import { clearUser } from "../../store/slices/userSlice.jsx";
+import { clearUser, updateUserProfile } from "../../store/slices/userSlice.jsx";
 import GroupChat from "../../components/Chat/GroupChat.jsx";
 import { MdHome } from "react-icons/md";
 import { CiChat1 } from "react-icons/ci";
@@ -50,11 +50,11 @@ export default function EducatorDashboard() {
 
   const user = useSelector((state) => state.user);
 
-  useEffect(() => {
+ useEffect(() => {
     if (user?.userData?.user) {
-      setProfileData(user.userData.user);
+      setProfileData(user.userData. user);
     }
-  }, ); 
+  }, [user]);  // ✅ ADD [user] dependency
   
   useEffect(()=>{
     const getEducatorSessions = async () =>{
@@ -139,25 +139,37 @@ const handleProfileUpdate = async (e) => {
   e.preventDefault();
   setLoading(true);
 
-  let updatedData = { ...changedData };
+  let updatedData = { ... changedData };
 
- if (file) {
-  const imageUrl = await handleImageUpload(file);
-  if (imageUrl) {
-    updatedData.avatar = imageUrl;
+  if (file) {
+    const imageUrl = await handleImageUpload(file);
+    if (imageUrl) {
+      updatedData.avatar = imageUrl;
+    }
+    setFile(null); 
   }
-  setFile(null); 
-}
-
 
   try {
     const response = await axios.patch(
-      API.updateUserDetails.url,
+      API.updateUserDetails. url,
       updatedData,
       { withCredentials: true }
     );
 
     console.log(response);
+    
+    // ✅ NEW: Update Redux store
+    dispatch(updateUserProfile(updatedData));
+    
+    // ✅ NEW: Update local state
+    setProfileData(prev => ({
+      ...prev,
+      ...updatedData
+    }));
+    
+    // ✅ NEW: Clear changed data
+    setChangedData({});
+    
     setEditProfile(false);
   } catch (error) {
     console.error("Update failed:", error);
@@ -730,266 +742,229 @@ const fetchWalletAmount = async() =>{
           </div>
         )}
 
-        {/* Profile View */}
-        {activeTab === "profile" && (
-          <div className="bg-[#b4c0b2] shadow-md rounded-lg p-6">
-            <div className="flex flex-col md:flex-row md:space-x-8">
-              {/* Avatar Section */}
-              <div className="md:w-1/4 flex flex-col items-center  mb-6 md:mb-0">
-              <div className="w-32 h-32 rounded-full overflow-hidden mb-4">
-                <img
-                  src={
-                    changedData.avatar ||
-                    (file && URL.createObjectURL(file)) ||
-                    profileData.avatar || "/default_userFrofile.webp"
-                  }
-                  alt="Profile Avatar"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+{/* Profile View */}
+{activeTab === "profile" && (
+  <div className="bg-[#b4c0b2] shadow-md rounded-lg p-6">
+    <div className="flex flex-col md:flex-row md:space-x-8">
+      {/* Avatar Section */}
+      <div className="md:w-1/4 flex flex-col items-center mb-6 md:mb-0">
+        <div className="w-32 h-32 rounded-full overflow-hidden mb-4">
+          <img
+            src={
+              changedData.avatar ||
+              (file && URL.createObjectURL(file)) ||
+              profileData.avatar || "/default_userFrofile.webp"
+            }
+            alt="Profile Avatar"
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <input
+          disabled={! editProfile}
+          type="file"
+          accept="image/*"
+          onChange={(e) => setFile(e.target.files[0])}
+          className={`w-48 md:w-40 lg:w-52 bg-yellow-200 flex items-center justify-center px-4 py-2 rounded-md text-sm text-gray-700 ${editProfile ? "hover:bg-yellow-300 cursor-pointer" : "cursor-not-allowed"}`}
+          id="avatarUpload"
+        />
+      </div>
+
+      {/* Profile Form */}
+      <div className="md:w-3/4">
+        <form onSubmit={handleProfileUpdate}>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Full Name */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                Full Name
+              </label>
               <input
-               disabled={!editProfile}
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files[0])}
-                className={`w-48 md:w-40 lg:w-52 bg-yellow-200 flex items-center justify-center px-4 py-2 rounded-md text-sm text-gray-700  ${editProfile ? "hover:bg-yellow-300 cursor-pointer" : "cursor-not-allowed"}`}
-                id="avatarUpload"
+                type="text"
+                value={profileData.name || ''}
+                readOnly
+                className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-200 text-black cursor-not-allowed"
               />
-         
-             
-              </div>
+            </div>
 
-              {/* Profile Form */}
-              <div className="md:w-3/4">
-                <form onSubmit={handleProfileUpdate}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    {/* Full Name */}
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        value={profileData.name}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            name: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 bg-[#faf3dd] text-black"
-                        required
-                      />
-                    </div>
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={profileData.email || ''}
+                readOnly
+                className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-gray-200 text-black cursor-not-allowed"
+              />
+            </div>
 
-                    {/* Email */}
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={profileData.email}
-                        readOnly
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                      />
-                    </div>
+            {/* Role */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                Role
+              </label>
+              <input
+                type="text"
+                value={profileData.role || ''}
+                readOnly
+                className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-gray-200 text-black cursor-not-allowed"
+              />
+            </div>
 
-                    {/* Role */}
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Role
-                      </label>
-                      <input
-                        type="text"
-                        value={profileData.role}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            role: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                      />
-                    </div>
+            {/* Subrole */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                Subrole
+              </label>
+              <input
+                type="text"
+                value={profileData.subrole || ''}
+                readOnly
+                className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-gray-200 text-black cursor-not-allowed"
+              />
+            </div>
 
-                    {/* Subrole */}
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Subrole
-                      </label>
-                      <input
-                        type="text"
-                        value={profileData.subrole}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            subrole: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                      />
-                    </div>
+            {/* Country */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                Country
+              </label>
+              <input
+                type="text"
+                value={profileData. country || ''}
+                readOnly
+                className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-gray-200 text-black cursor-not-allowed"
+              />
+            </div>
 
-                    {/* Country */}
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Country
-                      </label>
-                      <input
-                        type="text"
-                        value={profileData.country}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            country: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                      />
-                    </div>
+            {/* Language */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                Language
+              </label>
+              <input
+                type="text"
+                value={profileData.language || ''}
+                readOnly
+                className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-gray-200 text-black cursor-not-allowed"
+              />
+            </div>
 
-                    {/* Language */}
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Language
-                      </label>
-                      <input
-                        type="text"
-                        value={profileData.language}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            language: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                      />
-                    </div>
+            {/* Service Type */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                Service Type
+              </label>
+              <input
+                type="text"
+                value={profileData.serviceType || ''}
+                readOnly
+                className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-gray-200 text-black cursor-not-allowed"
+              />
+            </div>
 
-                    {/* Service Type */}
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Service Type
-                      </label>
-                      <input
-                        type="text"
-                        value={profileData.serviceType}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            serviceType: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                      />
-                    </div>
+            {/* Payout Method */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                Payout Method
+              </label>
+              <input
+                type="text"
+                value={profileData.payoutMethod || ''}
+                readOnly
+                className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-gray-200 text-black cursor-not-allowed"
+              />
+            </div>
 
-                    {/* Payout Method */}
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Payout Method
-                      </label>
-                      <input
-                        type="text"
-                        value={profileData.payoutMethod}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            payoutMethod: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                      />
-                    </div>
+            {/* UPI ID */}
+            <div>
+              <label className="block text-sm font-medium text-black mb-1">
+                UPI ID
+              </label>
+              <input
+                type="text"
+                value={profileData. upiID || ''}
+                readOnly
+                className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-gray-200 text-black cursor-not-allowed"
+              />
+            </div>
 
-                    {/* UPI ID */}
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        UPI ID
-                      </label>
-                      <input
-                        type="text"
-                        value={profileData.upiID}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            upiID: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                      />
-                    </div>
+            {/* Approved */}
+            <div className="flex items-center space-x-2 mt-4">
+              <input
+                type="checkbox"
+                checked={profileData. Approved || false}
+                readOnly
+                disabled
+                className="h-4 w-4 text-black border-gray-300 rounded cursor-not-allowed"
+              />
+              <label className="text-sm text-black">
+                Approved
+              </label>
+            </div>
 
-                    {/* Approved */}
-                    <div className="flex items-center space-x-2 mt-4">
-                      <input
-                        type="checkbox"
-                        checked={profileData.Approved}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            Approved: e.target.checked,
-                          })
-                        }
-                        className="h-4 w-4 text-black border-gray-300 rounded"
-                      />
-                      <label className="text-sm text-black">
-                        Approved
-                      </label>
-                    </div>
+            {/* Experience - EDITABLE */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-black mb-1">
+                Experience
+              </label>
+              <textarea
+                value={changedData.experience !== undefined ? changedData.experience :  (profileData.experience || '')}
+                disabled={!editProfile}
+                onChange={(e) => handleChange("experience", e.target. value)}
+                className={`w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 text-black ${
+                  !editProfile ?  'bg-gray-200 cursor-not-allowed' : 'bg-[#faf3dd]'
+                }`}
+                rows={2}
+              />
+            </div>
 
-                    {/* Experience */}
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Experience
-                      </label>
-                      <textarea
-                        value={profileData.experience}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            experience: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                        rows={2}
-                      />
-                    </div>
-
-                    {/* Bio */}
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-black mb-1">
-                        Bio
-                      </label>
-                      <textarea
-                        value={profileData.bio}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            bio: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 bg-[#faf3dd] text-black"
-                        rows={4}
-                      />
-                    </div>
-                  </div>
-              <div className=" flex justify-end  item-center gap-5">
-              <FaUserEdit onClick={!setEditProfile} className=" text-4xl cursor-pointer text-white" />
-                  <button onSubmit={()=>{handleProfileUpdate(profileData)}}
-                    type="submit"
-                    disabled= {true}
-                    className="px-6 py-2 bg-gray-500 cursor-not-allowed text-white rounded-md font-medium "
-                  >
-                    Save Profile
-                  </button>
-              </div>
-                </form>
-              </div>
+            {/* Bio - EDITABLE */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-black mb-1">
+                Bio
+              </label>
+              <textarea
+                value={changedData.bio !== undefined ? changedData.bio : (profileData.bio || '')}
+                disabled={!editProfile}
+                onChange={(e) => handleChange("bio", e.target.value)}
+                className={`w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 text-black ${
+                  ! editProfile ? 'bg-gray-200 cursor-not-allowed' : 'bg-[#faf3dd]'
+                }`}
+                rows={4}
+              />
             </div>
           </div>
-        )}
+
+          <div className="flex justify-end item-center gap-5">
+            <FaUserEdit 
+              onClick={() => {
+                if (editProfile) {
+                  setChangedData({});
+                  setFile(null);
+                }
+                setEditProfile(!editProfile);
+              }} 
+              className="text-4xl cursor-pointer text-white" 
+            />
+            <button
+              type="submit"
+              disabled={!editProfile || loading}
+              className={`px-6 py-2 rounded-md font-medium ${
+                !editProfile || loading
+                  ? "bg-gray-500 cursor-not-allowed text-white"
+                  : "bg-blue-600 hover:bg-blue-700 cursor-pointer text-white"
+              }`}
+            >
+              {loading ? "Saving..." : "Save Profile"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+)}
 
 
 {activeTab === "Community Chat" && (
