@@ -15,8 +15,24 @@ export const userSlice = createSlice({
         state.userData.user.theme = action.payload; // Update only theme
       }
     },
+    // add update UserProfile
+    updateUserProfile(state, action) {
+      if (state.userData?. user) {
+        return {
+          ...state,
+          userData: {
+            ...state.userData,
+            user: {
+              ... state.userData.user,
+              ...action.payload
+            }
+          }
+        };
+      }
+      return state;
+    },
   }
 });
 
-export const { userinfo, clearUser, updateTheme } = userSlice.actions;
+export const { userinfo, clearUser, updateTheme, updateUserProfile } = userSlice.actions;
 export default userSlice.reducer;
